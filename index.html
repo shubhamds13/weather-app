@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aurora Weather — Minimal & Modern</title>
+  <style>
+    :root{
+      --bg1:#0f1724; /* deep navy */
+      --bg2:#0b1220; /* near black */
+      --accent:#6ee7b7; /* mint */
+      --glass: rgba(255,255,255,0.06);
+      --glass-2: rgba(255,255,255,0.04);
+      --card-shadow: 0 10px 30px rgba(2,6,23,0.6);
+      --radius:16px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    /* set a soft animated gradient background */
+    body{
+      margin:0;
+      min-height:100vh;
+      background: radial-gradient(1200px 600px at 10% 20%, rgba(102,126,234,0.08), transparent 10%),
+                  radial-gradient(800px 400px at 90% 80%, rgba(99,102,241,0.04), transparent 8%),
+                  linear-gradient(180deg,var(--bg1),var(--bg2));
+      color: #e6eef8;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:40px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* main container */
+    .wrap{
+      width:100%;
+      max-width:980px;
+      display:grid;
+      grid-template-columns: 460px 1fr;
+      gap:28px;
+      align-items:stretch;
+    }
+
+    /* left - controls + preview */
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:var(--radius);
+      padding:26px;
+      box-shadow:var(--card-shadow);
+      backdrop-filter: blur(8px) saturate(120%);
+      border: 1px solid rgba(255,255,255,0.04);
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      min-height:420px;
+    }
+
+    .brand{
+      display:flex;align-items:center;gap:12px;
+    }
+    .logo{
+      width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:700;color:#02203b;box-shadow:0 6px 18px rgba(45,212,191,0.08);
+    }
+    h1{font-size:18px;margin:0}
+    p.lead{margin:0;color:#b8d1e6;font-size:13px}
+
+    /* input area */
+    .controls{
+      display:flex;gap:10px;align-items:center;margin-top:8px;
+    }
+    input[type=text]{
+      flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;font-size:15px;outline:none;
+      box-shadow: inset 0 -6px 18px rgba(2,6,23,0.12);
+    }
+    button.primary{
+      padding:11px 16px;border-radius:12px;border:none;background:linear-gradient(180deg,var(--accent),#34d399);color:#012528;font-weight:700;cursor:pointer;letter-spacing:0.3px;
+      box-shadow: 0 8px 18px rgba(52,211,153,0.12);
+    }
+    button.ghost{
+      padding:10px;border-radius:10px;border:1px dashed rgba(255,255,255,0.04);background:transparent;color:#9fbad0;cursor:pointer;font-size:13px
+    }
+
+    .hint{font-size:13px;color:#9fbad0}
+
+    /* right - big weather card */
+    .weather-card{
+      border-radius:var(--radius);padding:28px;display:flex;flex-direction:column;gap:18px;justify-content:center;align-items:center;min-height:420px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.03);backdrop-filter: blur(6px);
+      box-shadow: 0 30px 60px rgba(2,6,23,0.65);
+    }
+
+    .big-temp{font-size:72px;font-weight:800;line-height:0.9;margin:0}
+    .unit{font-size:20px;font-weight:700;margin-left:8px;color:#9fbad0}
+    .meta{display:flex;gap:18px;align-items:center}
+
+    .condition{display:flex;flex-direction:column;align-items:center;gap:6px}
+    .cond-icon{width:96px;height:96px}
+    .small{font-size:14px;color:#b8d1e6}
+
+    .stats{display:flex;gap:18px;margin-top:8px}
+    .stat{background:var(--glass-2);padding:12px;border-radius:12px;min-width:120px;text-align:center}
+    .stat b{display:block;font-size:18px}
+
+    /* animated waveform at the bottom */
+    .wave{
+      position:relative;height:40px;width:100%;opacity:0.6;filter:blur(8px);
+    }
+    svg{width:100%;height:100%}
+
+    /* responsive */
+    @media (max-width:900px){
+      .wrap{grid-template-columns:1fr;max-width:720px}
+      .panel,.weather-card{min-height:320px}
+    }
+
+    /* little micro-animations */
+    .pulse{animation:pop .9s cubic-bezier(.2,.9,.3,1) both}
+    @keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+    .credits{font-size:12px;color:#8aa6c6;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel pulse" id="left">
+      <div class="brand">
+        <div class="logo">AW</div>
+        <div>
+          <h1>Aurora Weather</h1>
+          <p class="lead">Sleek, minimal weather for your day — enter any city or postcode.</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input id="locationInput" type="text" placeholder="City name or postcode (e.g. London, Mumbai, 90210)" value="London" />
+        <button class="primary" id="getBtn">Check</button>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
+        <p class="hint">Try: "New York", "Delhi", or GPS coordinates like "48.8566,2.3522"</p>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="ghost" id="celsiusBtn">°C</button>
+          <button class="ghost" id="fahrenBtn">°F</button>
+        </div>
+      </div>
+
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+        <div class="credits">Powered by WeatherAPI. Enter your API key in the script (or keep using the provided demo key).</div>
+      </div>
+    </aside>
+
+    <main class="weather-card pulse" id="card">
+      <div class="condition">
+        <img id="icon" class="cond-icon" src="" alt="" />
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <h2 id="temp" class="big-temp">--</h2><div class="unit" id="unit">°C</div>
+        </div>
+        <div id="text" class="small">Search a location to see weather</div>
+      </div>
+
+      <div class="meta">
+        <div style="text-align:center">
+          <div id="locName" class="small">—</div>
+          <div id="localtime" class="small">—</div>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="small">Humidity</div>
+            <b id="humidity">--</b>
+          </div>
+          <div class="stat">
+            <div class="small">Wind</div>
+            <b id="wind">--</b>
+          </div>
+          <div class="stat">
+            <div class="small">Feels like</div>
+            <b id="feels">--</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="wave" aria-hidden="true">
+        <svg viewBox="0 0 1200 40" preserveAspectRatio="none">
+          <path d="M0 20 C150 5 300 35 450 20 C600 5 750 35 900 20 C1050 5 1200 35 1200 20 L1200 40 L0 40 Z" fill="rgba(110,231,183,0.06)"></path>
+        </svg>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    /*
+      IMPORTANT:
+      The user provided this example API URL: 
+      http://api.weatherapi.com/v1/current.json?key=80e42a37b355479b879161754251311&q=London&aqi=yes
+
+      You may replace `API_KEY` with your own key if needed. If you encounter CORS errors, you can:
+      - Use a server-side proxy to call WeatherAPI and forward results to the browser.
+      - Or host this file on a server that supports CORS-friendly requests.
+    */
+
+    // Put your API key here (the user gave one; you can keep it):
+    const API_KEY = '80e42a37b355479b879161754251311';
+
+    // default unit state
+    let unit = 'C';
+
+    const el = id => document.getElementById(id);
+    const input = el('locationInput');
+    const btn = el('getBtn');
+    const icon = el('icon');
+    const temp = el('temp');
+    const text = el('text');
+    const locName = el('locName');
+    const localtime = el('localtime');
+    const humidity = el('humidity');
+    const wind = el('wind');
+    const feels = el('feels');
+    const unitEl = el('unit');
+    const cBtn = el('celsiusBtn');
+    const fBtn = el('fahrenBtn');
+
+    function setUnit(u){
+      unit = u;
+      unitEl.textContent = unit === 'C' ? '°C' : '°F';
+      cBtn.style.opacity = unit==='C' ? '1' : '0.6';
+      fBtn.style.opacity = unit==='F' ? '1' : '0.6';
+    }
+    setUnit('C');
+
+    async function fetchWeather(query){
+      try{
+        // encode query so spaces and commas are safe
+        const q = encodeURIComponent(query.trim());
+        const url = `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${q}&aqi=yes`;
+        // Note: using fetch directly from browser — if you encounter CORS, see comments above.
+        const res = await fetch(url);
+        if(!res.ok){
+          const txt = await res.text();
+          throw new Error(`API error ${res.status}: ${txt}`);
+        }
+        const data = await res.json();
+        return data;
+      }catch(err){
+        throw err;
+      }
+    }
+
+    function showWeather(data){
+      // data structure: { location: {...}, current: {...} }
+      const loc = data.location;
+      const cur = data.current;
+
+      locName.textContent = `${loc.name}, ${loc.country}`;
+      localtime.textContent = `Local: ${loc.localtime}`;
+      text.textContent = cur.condition.text;
+
+      // set icon (WeatherAPI provides icon path, prefix is //cdn.weatherapi.com/... but we'll normalize to https)
+      let iconUrl = cur.condition.icon;
+      if(iconUrl && iconUrl.startsWith('//')) iconUrl = 'https:' + iconUrl;
+      if(iconUrl && iconUrl.startsWith('/')) iconUrl = 'https://cdn.weatherapi.com' + iconUrl;
+      icon.src = iconUrl;
+      icon.alt = cur.condition.text;
+
+      // temps
+      const ctemp = cur.temp_c;
+      const ftemp = cur.temp_f;
+      temp.textContent = unit === 'C' ? Math.round(ctemp) : Math.round(ftemp);
+
+      humidity.textContent = cur.humidity + '%';
+      wind.textContent = `${cur.wind_kph} kph`; // you could convert to m/s if desired
+      feels.textContent = unit === 'C' ? Math.round(cur.feelslike_c) + '°' : Math.round(cur.feelslike_f) + '°';
+
+      // small design tweak: change background accent depending on day/night
+      const isDay = cur.is_day === 1;
+      document.body.style.background = isDay ?
+        `radial-gradient(1200px 600px at 10% 20%, rgba(102,126,234,0.06), transparent 10%), radial-gradient(800px 400px at 90% 80%, rgba(99,102,241,0.03), transparent 8%), linear-gradient(180deg,#092036,#071225)` :
+        `radial-gradient(1200px 600px at 10% 20%, rgba(0,0,0,0.18), transparent 10%), radial-gradient(800px 400px at 90% 80%, rgba(3,6,23,0.06), transparent 8%), linear-gradient(180deg,#021018,#000810)`;
+
+      // micro-animation
+      temp.classList.add('pulse');
+      setTimeout(()=>temp.classList.remove('pulse'),900);
+    }
+
+    async function handleQuery(){
+      const q = input.value.trim();
+      if(!q) return alert('Please enter a location.');
+      btn.disabled = true; btn.textContent = 'Loading...';
+      try{
+        const data = await fetchWeather(q);
+        showWeather(data);
+      }catch(err){
+        alert('Failed to fetch weather — ' + err.message);
+        console.error(err);
+      }finally{
+        btn.disabled = false; btn.textContent = 'Check';
+      }
+    }
+
+    // event listeners
+    btn.addEventListener('click', handleQuery);
+    input.addEventListener('keydown', e=>{ if(e.key === 'Enter') handleQuery(); });
+    cBtn.addEventListener('click', ()=>{ setUnit('C'); if(!temp.textContent.startsWith('--')) handleQuery(); });
+    fBtn.addEventListener('click', ()=>{ setUnit('F'); if(!temp.textContent.startsWith('--')) handleQuery(); });
+
+    // initial load for the sample value
+    handleQuery();
+  </script>
+</body>
+</html>
